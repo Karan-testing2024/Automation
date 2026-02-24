@@ -18,7 +18,7 @@ import java.util.Properties;
 import javax.mail.*;
 import javax.mail.internet.*;
 
-public class Daily_test {
+public class DailyTest {
 
     @Test
     public void checkWebsite() throws Exception {
