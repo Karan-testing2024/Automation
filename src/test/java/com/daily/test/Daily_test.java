@@ -2,6 +2,7 @@ package com.daily.test;
 
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.io.FileHandler;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -11,56 +12,60 @@ import io.github.bonigarcia.wdm.WebDriverManager;
 import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.Duration;
 import java.util.Properties;
 
-import javax.mail.Authenticator;
-import javax.mail.Message;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
+import javax.mail.*;
+import javax.mail.internet.*;
 
 public class Daily_test {
 
     @Test
     public void checkWebsite() throws Exception {
 
-        
-        URL url = new URL("https://www.koyambedumarket.in/");
+        String website = "https://www.koyambedumarket.in/";
+
+        // 🔹 Check HTTP Status Code
+        URL url = new URL(website);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.connect();
-
         int statusCode = connection.getResponseCode();
         System.out.println("Status Code: " + statusCode);
 
-        
+        // 🔹 Setup Headless Chrome for Jenkins
         WebDriverManager.chromedriver().setup();
-        WebDriver driver = new ChromeDriver();
-        driver.get("https://www.koyambedumarket.in/");
-        driver.manage().window().maximize();
+
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless=new");
+        options.addArguments("--no-sandbox");
+        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--window-size=1920,1080");
+
+        WebDriver driver = new ChromeDriver(options);
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+
+        driver.get(website);
 
         try {
 
-            
+            // 🔹 Validate Status Code
             Assert.assertEquals(statusCode, 200, "Website is DOWN!");
 
-            
+            // 🔹 Validate Title
             String title = driver.getTitle();
             System.out.println("Page Title: " + title);
             Assert.assertTrue(title.contains("Koyambedu"), "Title mismatch!");
 
-            
+            // 🔹 Take Screenshot
             String path = takeScreenshot(driver, "Success");
-            sendEmail("Status code:" +statusCode +" --- Website is working fine ", path);
+
+            // 🔹 Send Success Email
+            sendEmail("Status Code: " + statusCode + " - Website is working fine.", path);
 
         } catch (AssertionError e) {
 
-            
             String path = takeScreenshot(driver, "Failure");
-            sendEmail("Status code:"+statusCode +"Website is not working!....please check", path);
+            sendEmail("Status Code: " + statusCode + " - Website is DOWN! Please check immediately.", path);
             throw e;
 
         } finally {
@@ -68,29 +73,31 @@ public class Daily_test {
         }
     }
 
-   
+    // 📸 Screenshot Method
     public String takeScreenshot(WebDriver driver, String name) throws Exception {
 
         TakesScreenshot ts = (TakesScreenshot) driver;
         File source = ts.getScreenshotAs(OutputType.FILE);
 
-        File folder = new File("./screenshots");
+        File folder = new File("screenshots");
         if (!folder.exists()) {
             folder.mkdir();
         }
 
-        String path = "./screenshots/" + name + ".png";
+        String path = "screenshots/" + name + "_" + System.currentTimeMillis() + ".png";
         FileHandler.copy(source, new File(path));
 
         return path;
     }
 
-    
+    // 📧 Email Method
     public void sendEmail(String messageText, String attachmentPath) throws Exception {
 
-        String from = "karan.bcom2024@gmail.com";     
-        String password = "qxkq qpzt iemw cgbh";     
-        String to = "karan.bcom2024@gmail.com";          
+        String from = "karan.bcom2024@gmail.com";  
+        String password = "qxkqqpztiemwcgbh";  
+        String to = "karan.bcom2024@gmail.com";
+
+        System.out.println("Preparing to send email...");
 
         Properties props = new Properties();
         props.put("mail.smtp.host", "smtp.gmail.com");
@@ -117,7 +124,7 @@ public class Daily_test {
         MimeBodyPart filePart = new MimeBodyPart();
         filePart.attachFile(new File(attachmentPath));
 
-        MimeMultipart multipart = new MimeMultipart();
+        Multipart multipart = new MimeMultipart();
         multipart.addBodyPart(textPart);
         multipart.addBodyPart(filePart);
 
@@ -125,6 +132,6 @@ public class Daily_test {
 
         Transport.send(message);
 
-        System.out.println("Email Sent Successfully ");
+        System.out.println("Email Sent Successfully ✅");
     }
 }
